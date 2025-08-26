@@ -1,3 +1,4 @@
+//  Acceder a archivo en librería
 #include "init.h"
 
 //  Desplegar número en display 7 segmentos
@@ -94,7 +95,7 @@ void desplegarNumero(uint8_t numero){
         digitalWrite(dF, HIGH);
         digitalWrite(dG, HIGH);
         break;
-    default:
+    default: //  Solo como verificación de error de lectura
         digitalWrite(dA, HIGH);
         digitalWrite(dB, LOW);
         digitalWrite(dC, LOW);
@@ -126,7 +127,7 @@ void configDisplay7(void){
     pinMode(dF, OUTPUT);
     pinMode(dG, OUTPUT);
     pinMode(dP, OUTPUT);
-
+    //  Inicializar apagados
     digitalWrite(dA, LOW);
     digitalWrite(dB, LOW);
     digitalWrite(dC, LOW);
@@ -137,9 +138,10 @@ void configDisplay7(void){
     digitalWrite(dP, LOW);
 }
 void inittemp(void){
+    //  Inicializa LM35
   pinMode(temp, INPUT);
 }
-void initPWM(void){
+void initPWM(void){  //  Inicializa PWM para LED RGB
   //    Asignar canales
   ledcSetup(canalR, freqPWM, resPWM);
   ledcSetup(canalV, freqPWM, resPWM);
@@ -150,16 +152,18 @@ void initPWM(void){
   ledcAttachPin(LEDa, canalA);
 }
 void initleds(void){
+    //  Configuración de LED RGB
   pinMode(LEDr, OUTPUT);
   pinMode(LEDv, OUTPUT);
   pinMode(LEDa, OUTPUT);
-
+  //  Inicia en HIGH = OFF por ser ánodo común
   digitalWrite(LEDr, HIGH);
   digitalWrite(LEDv, HIGH);
   digitalWrite(LEDa, HIGH);
 }
-void initServo(void){
+void initServo(void){  //  Canales especiales para servo motor (diferente frecuencia)
   ledcSetup(canalServo, freqServo, resServo);
 
   ledcAttachPin(Servo, canalServo);
+
 }
