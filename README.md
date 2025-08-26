@@ -12,4 +12,4 @@ Materiales requeridos:
 - 3 transistores NPN (2N2222)
 - 11 resistencias de 220 Ohms y 3 de 10K Ohms
 
-Utilizar VSC con librería Adafruit IO Arduino y alimentar servo motor con 5V (Vin al conectar con computadora).
+Utilizar VSC con librería Adafruit IO Arduino, añadir archivo config.h para inicializar módulo WIFI y alimentar servo motor con 5V (Vin al conectar con computadora).
