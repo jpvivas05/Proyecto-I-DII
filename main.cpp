@@ -11,59 +11,67 @@
 //******************************************/
 #include <Arduino.h>
 #include <stdint.h>
+//  Librería para PWM
 #include "driver/ledc.h"
+//  Librerías especiales para proyecto
+//  Inicialización de hardware
 #include "init.h"
+//  Inicialización de Adafruit IO
 #include "config.h"
 
 //******************************************/
 // Definiciones
 //******************************************/
-//      Variables globales
+//  Displays
 #define dis1 22
 #define dis2 27
 #define dis3 12
+
+//******************************************/
+// Variables globales
+//******************************************/
 // Variables de botón
 volatile bool btn1Pressed;
 volatile uint32_t lastISRbtn1 = 0;
-//  Variables de display
+//  Variables de ISR display
 volatile uint8_t digito = 0;
 volatile uint8_t decena = 0;
 volatile uint8_t unidad = 0;
 volatile uint8_t decimal = 0;
-//Filtro de promedio
+//Filtro EMA
 float adcRawEMA = 0; // Y(0)
 float adcFiltrado = adcRawEMA; // S(0) = Y(0)
 float alpha = 0.5; // Factor de suavizado (0-1)
-
+//  Conversión a °C
 float gradC;
-
+//  Configuración de timer para displays
 hw_timer_t *timerMultiplex = NULL; 
-
 
 //******************************************/
 // Prototipos de funciones
 //******************************************/
+//  Inicializa ISR para displays
 void initTimerMultiplex(void);
-
+//  Inicializa ISR para botón
 void initbtn(void);
 //  Prototipo de filtrado
 void getADCEMA(void);
-//  Funciones del código
+
+//  Operaciones para desplegar temperatura en displays
+void divNum(float num);
+
 void semaforo(void);
-//  Prototipo ISR
+//  Prototipos ISR
 void IRAM_ATTR btn1_ISR(void);
 void IRAM_ATTR TMR_Multiplex_ISR(void);
 
-//  Desplegar Temperatura
-void divNum(float num);
 // Adafruit IO
-// set up the 'counter' feed
 AdafruitIO_Feed *canalTemperatura = io.feed("temperatura");
 
 //******************************************/
 // ISRs Rutinas de Interrupcion
 //******************************************/
-// ISR para el multiplexeo del display - Se ejecuta cada 3ms
+// ISR para el multiplexeo del display
 void IRAM_ATTR TMR_Multiplex_ISR(void) {
   // Apaga todos los transistores para evitar "ghosting"
   digitalWrite(dis1, LOW);
@@ -87,7 +95,6 @@ void IRAM_ATTR TMR_Multiplex_ISR(void) {
       digitalWrite(dis3, HIGH);
       break;
   }
-
   digito = (digito + 1) % 3; // Avanza al siguiente dígito 
 }
 
@@ -97,14 +104,14 @@ void IRAM_ATTR btn1_ISR(void){
     btn1Pressed = true;
     lastISRbtn1 = tiempoActual1;
   } 
+  //  Al tocar el botón, espera 250ms para volver a verificar el estado
 }
-//******************************************/
-// Variables globales
-//******************************************/
+
 //******************************************/
 // Configuracion
 //******************************************/
 void setup() {
+  //  Comunicación serial para mostrar en pantalla
   Serial.begin(115200);
 
   // wait for serial monitor to open
@@ -124,19 +131,19 @@ void setup() {
   // we are connected
   Serial.println();
   Serial.println(io.statusText());
-
+  //  Inicializar hardware
   initbtn();
   initleds();
   initPWM();
   initServo();
-  initTimerMultiplex();   // Configura y arranca el timer del display
-
   configDisplay7();
   
+  initTimerMultiplex();   // Configura y arranca el timer del display
+  //  Configuración de displays
   pinMode(dis1, OUTPUT);
   pinMode(dis2, OUTPUT);
   pinMode(dis3, OUTPUT);
-  
+  //  Toma muestras iniciales para filtro estable
   for (int i = 0; i < 65; i++) {
   getADCEMA();
   }
@@ -150,16 +157,21 @@ void loop() {
   // function. it keeps the client connected to
   // io.adafruit.com, and processes any incoming data.
   io.run();
+  // Del número actual desde la última toma de datos, calcula para displays
   divNum(gradC);
+  // Se ejecuta solo cuando se presiona el botón una vez
   if (btn1Pressed){
+    //  Actualiza estados
     btn1Pressed = false;
     getADCEMA();
     semaforo();
+    //  Imprime valores obtenidos
     Serial.println(adcFiltrado);
     Serial.println(gradC);
     // save count to the feed on Adafruit IO
     Serial.print("sending -> ");
     Serial.println(gradC);
+    //  Envía datos obtenidos a Adafruit IO
     canalTemperatura-> save(gradC);
   }
 }
@@ -173,7 +185,7 @@ void semaforo(void){
   ledcWrite(canalV, 1023);
   
   if(gradC < 21){ // Temperatura Baja
-    // Enciende el azul (el valor de 0 es brillo maximo)
+    // Enciende el azul (el valor de 0 es brillo maximo) y actualiza posición de servo
     ledcWrite(canalA, 0);
     ledcWrite(canalServo, 150);
   }
@@ -215,4 +227,5 @@ void initTimerMultiplex(void) {
   timerAlarmWrite(timerMultiplex, 3000, true);
   // Activa la alarma
   timerAlarmEnable(timerMultiplex);
+
 }
